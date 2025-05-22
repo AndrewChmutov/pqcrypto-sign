@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+[build-dependencies]
+num-complex = "0.4.6"
+modular_math = "0.1.6"
+primitive-types = "0.12.2"
