@@ -19,6 +19,7 @@
         gnum4
         pre-commit
         zlib
+        rust-analyzer
         zsh
       ];
       runScript = "zsh";
