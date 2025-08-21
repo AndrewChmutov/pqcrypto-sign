@@ -17,7 +17,7 @@ fn ffi_expand_roots(roots: &[Complex64]) -> Vec<Complex64> {
 }
 
 fn fft_constants(n: usize) -> Vec<Vec<Complex64>> {
-    let mut roots = Vec::with_capacity(n);
+    let mut roots = Vec::with_capacity(n + 1);
     roots.push(vec![Complex64::new(0.0, 1.0), Complex64::new(0.0, -1.0)]);
     for i in 1..=n {
         roots.push(ffi_expand_roots(&roots[i - 1]));
@@ -56,7 +56,7 @@ fn ntt_constants(n: usize) -> (Vec<Vec<u16>>, Vec<u16>) {
     let Zq = ModMath::new(Q as u32);
 
     let expand = ntt_expander(&Zq);
-    let mut roots = Vec::with_capacity(n);
+    let mut roots = Vec::with_capacity(n + 1);
     let mut temp_root = ntt_solve(Zq.sub(0, 1), &Zq).unwrap().to_vec();
     roots.push(from_primitive(&temp_root));
     for _ in 1..=n {
@@ -81,11 +81,11 @@ fn save_fft_constants(out_dir: &OsStr) {
         .into_iter()
         .map(|v| {
             format!(
-                "{case} => [\n{align_in}{slice}\n{align_out}],",
+                "{case} => &[\n{align_in}{slice}\n{align_out}],",
                 case = v.len(),
                 slice = v
                     .into_iter()
-                    .map(|c| format!("Complex64::new({}, {}),", c.re, c.im))
+                    .map(|c| format!("Complex64 {{ re: {}f64, im: {}f64 }},", c.re, c.im))
                     .collect::<Vec<_>>()
                     .join(&format!("\n{}", align_in))
             )
@@ -97,9 +97,10 @@ fn save_fft_constants(out_dir: &OsStr) {
         "\
 use num_complex::Complex64;
 
-pub fn roots(n: u16) -> &'static [Complex64] {{
+const pub fn roots(n: u16) -> &'static [Complex64] {{
     match n {{
         {arms}
+        _ => unreachable!(),
     }}
 }}"
     );
@@ -108,12 +109,12 @@ pub fn roots(n: u16) -> &'static [Complex64] {{
 
 fn save_ntt_constants(out_dir: &OsStr) {
     let dest_path = Path::new(&out_dir).join("ntt_constants.rs");
-    let (roots, inverses) = ntt_constants(4);
+    let (roots, inverses) = ntt_constants(9);
 
     let align = " ".repeat(8);
     let arms = roots
         .into_iter()
-        .map(|v| format!("{} => {v:?},", v.len()))
+        .map(|v| format!("{} => &{v:?},", v.len()))
         .collect::<Vec<_>>()
         .join(&format!("\n{align}"));
 
@@ -122,6 +123,7 @@ fn save_ntt_constants(out_dir: &OsStr) {
 pub fn roots_Zq(n: u16) -> &'static [u16] {{
     match n {{
         {arms}
+        _ => unreachable!(),
     }}
 }}"
     );
